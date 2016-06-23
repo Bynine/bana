@@ -11,8 +11,6 @@ import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
@@ -36,13 +34,14 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 		gui = new GUI();
 		batch = new SpriteBatch();
 		cam.setToOrtho(false, SCREENWIDTH/SCREEN, SCREENHEIGHT/SCREEN);
-		state = State.MENU;
+		state = State.GAME;
+		activeLevel = new Level_Oasis();
+		Room startingRoom = activeLevel.getRoom(0);
+		hero = new Hero(startingRoom.getStartPosition().x, startingRoom.getStartPosition().y);
+		changeRoom(startingRoom, startingRoom.getStartPosition(), true);
+		restartLevel();
 		Gdx.gl.glClearColor(222f/256f, 238f/256f, 214f/256f, 213f/256f); // 16 color palette's lightest color
 		Gdx.input.setInputProcessor(this);
-		
-		controlScreen = new Sprite(new Texture(Gdx.files.internal("sprites/controlsSmall.PNG")));
-		endingScreen = new Sprite(new Texture(Gdx.files.internal("sprites/missed.PNG")));
-		endingScreenCongratulations = new Sprite(new Texture(Gdx.files.internal("sprites/congratulations.PNG")));
 	}
 	private final OrthographicCamera cam = new OrthographicCamera();
 	public static final int SCREENWIDTH  = 480*SCREEN;
@@ -67,18 +66,10 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 	@SuppressWarnings("unused")
 	private long totalMoney = 0; // TODO: implement adding local money to total
 	private boolean flag_PAUSE;
-	private Sprite controlScreen, endingScreen, endingScreenCongratulations; // TEMPORARY
 
 	@Override
 	public void render () {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-		if (state == State.MENU){
-			batch.begin();
-			if (localMoney == 0) controlScreen.draw(batch);
-			else if (localMoney <= 74) endingScreen.draw(batch);
-			else if (localMoney == 75) endingScreenCongratulations.draw(batch);
-			batch.end();
-		}
 		if (state == State.GAME){
 			if (!flag_PAUSE) updateEntities(activeRoom.getEntityList(), deltaTime);
 			updateCamera();
@@ -182,14 +173,6 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 			flag_PAUSE = true;
 		}
 	}
-	private void startGame(){
-		state = State.GAME;
-		activeLevel = new Level_Oasis();
-		Room startingRoom = activeLevel.getRoom(0);
-		hero = new Hero(startingRoom.getStartPosition().x, startingRoom.getStartPosition().y);
-		changeRoom(startingRoom, startingRoom.getStartPosition(), true);
-		restartLevel();
-	}
 
 	private void restartLevel(){
 		hero.reset();
@@ -226,17 +209,11 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 	public static float getVolume(){
 		return volume;
 	}
-	
-	public static void TEMPendGame(){
-		System.out.println("end game");
-		state = State.MENU;
-	}
 
 	@Override
 	public boolean keyDown(int keycode) {
 		if (!flag_PAUSE && state == State.GAME) hero.keyDown(keycode);
 		switch(keycode){
-		case Keys.ENTER: if (state == State.MENU) startGame(); break;
 		case Keys.SHIFT_LEFT: pauseGame(); break;
 		default: break;
 		}
