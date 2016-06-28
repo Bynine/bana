@@ -17,9 +17,9 @@ public class Room_OasisEnd extends Room {
 	@Override
 	public void initEntities(Hero hero) {
 		super.initEntities(hero);
-		entityList.add(new Door(TILE*3, TILE*3, superLevel.getRoom(1), TILE*12, TILE*3));
-		entityList.add(new Door(TILE*91, TILE*3, superLevel.getRoom(1), TILE*12, TILE*3));
-		entityList.addAll(superLevel.getRoomContents(2));
+		entityList.add(new Door(TILE*3, TILE*3, superLevel.getRoom(1), TILE*28, TILE*3));
+		entityList.add(new Door(TILE*91, TILE*3, superLevel.getRoom(1), TILE*3, TILE*3));
+		addObjects(superLevel.getRoomCollectibles(2));
 		entityList.add(new Spikes(TILE*20, TILE*3, Spikes.Type.CACTUS));
 		entityList.add(new Spikes(TILE*20, TILE*4, Spikes.Type.CACTUS));
 		entityList.add(new Spikes(TILE*20, TILE*5, Spikes.Type.CACTUS));

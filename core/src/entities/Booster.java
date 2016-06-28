@@ -13,6 +13,7 @@ public class Booster extends Entity{
 		if (direction == Direction.DOWN) image.flip(false, true);
 	}
 
+	@Override
 	public void reactToAll(Entity entity) {
 		if (isOverlapping(entity)) {
 			entity.state = State.JUMP;

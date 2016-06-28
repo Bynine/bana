@@ -7,8 +7,9 @@ public class Block extends Entity{
 	public Block(float x, float y) {
 		super(x, y);
 		setImage("sprites/blockobject.PNG");
-		setCorpse("sprites/blockdestroyed.PNG"); // TODO: make generate little chunks that fly random places instead
+		setCorpse("sprites/blockdestroyed.PNG");
 		collision = Collision.SOLID;
+		does_MOVE = false;
 		knockback = 0.5f;
 		is_DESTRUCTABLE = true;
 		fallSpeed = 0;

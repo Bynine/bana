@@ -11,18 +11,19 @@ public class Fish extends Entity{
 		is_ENEMY = true;
 		collision = Collision.GHOST;
 		fallSpeed = 0;
-		updateSpeed = 0.8f;
+		acceleration = 0.8f;
 		maxSpeed = 4;
 		density = 0.6f;
 		flag_INIT = false;
 	}
 	
-	public void reactToHero(Entity hero){
+	@Override
+	public void reactToHero(Hero hero){
 		if (!flag_INIT) {
 			flag_INIT = true;
 			if (hero.getPosition().x > position.x) image.flip(true, false);
-			else updateSpeed *= -1;
+			else acceleration *= -1;
 		}
-		if (isThisCloseTo(hero, 480)) velocity.x += updateSpeed;
+		if (isThisCloseTo(hero, 480)) velocity.x += acceleration;
 	}
 }

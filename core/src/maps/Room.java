@@ -13,20 +13,21 @@ import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
+import entities.Collectible;
 import entities.Entity;
 import entities.Hero;
 
 public abstract class Room {
 	TiledMap map;
 	MapObjects mapObjects;
-	TmxMapLoader tmxMapLoader = new TmxMapLoader();
-	List<Rectangle> rectangleList = new ArrayList<>();
-	List<Entity> entityList = new ArrayList<>();
-	Vector2 startPosition = new Vector2(); // TODO: change start position depending on the door you went into to get there
+	final TmxMapLoader tmxMapLoader = new TmxMapLoader();
+	final List<Rectangle> rectangleList = new ArrayList<>();
+	final List<Entity> entityList = new ArrayList<>();
+	final Vector2 startPosition = new Vector2();
 	float gravity = 1f;
-	float wind = 0f; // TODO: implement wind (?) based on density (??)
+	float wind = 0f;
 	Music roomMusic;
-	Level superLevel;
+	final Level superLevel;
 	static final int TILE = Bana.TILE;
 	public Room(Level superLevel){
 		this.superLevel = superLevel;
@@ -53,6 +54,9 @@ public abstract class Room {
 	public float getGravity(){
 		return gravity;
 	}
+	public float getWind(){
+		return wind;
+	}
 	public void stopMusic(){
 		roomMusic.stop();
 	}
@@ -61,8 +65,6 @@ public abstract class Room {
 	}
 
 	public void initEntities(Hero hero){
-		// TODO: Change the way this works such that all things are declared when a level is first made, and most things return a new version of themselves
-		// upon completion, except for one-time collectibles like coins
 		clearOut();
 		if (entityList.contains(hero)) entityList.remove(hero);
 		entityList.add(hero);
@@ -71,6 +73,9 @@ public abstract class Room {
 	void clearOut(){
 		rectangleList.clear();
 		entityList.clear();
+	}
+	void addObjects(List<Collectible> collectibleList){
+		for (Collectible c: collectibleList) if (!c.isDead() && !c.isDestroyed()) entityList.add(c);
 	}
 	void setStartPosition(float x, float y){
 		startPosition.x = x;

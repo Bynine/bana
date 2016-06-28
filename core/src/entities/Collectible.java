@@ -12,11 +12,14 @@ public abstract class Collectible extends Entity{
 	
 	Collectible(float x, float y) {
 		super(x, y);
+		does_MOVE = false;
 	}
 
-	public void reactToHero(Entity hero){
+	@Override
+	public void reactToHero(Hero hero){
 		if (isTouching(hero)) {
 			flag_TODESTROY = true;
+			behavior(hero);
 			collect.play(Bana.getVolume());
 		}
 	}
@@ -24,4 +27,6 @@ public abstract class Collectible extends Entity{
 	public int getValue(){
 		return value;
 	}
+	
+	abstract void behavior(Hero hero);
 }

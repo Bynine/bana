@@ -14,6 +14,11 @@ public class Coin extends Collectible {
 		default: value = 0; setImage("sprites/coin.PNG"); break;
 		}
 	}
+	
+	@Override
+	void behavior(Hero hero) {
+		hero.addMoney(value);
+	}
 
 	public enum Type{
 		COIN, GEM

@@ -18,7 +18,7 @@ public class Room_OasisStart extends Room {
 	public void initEntities(Hero hero) {
 		super.initEntities(hero);
 		entityList.add(new Door(TILE*93, TILE*3, superLevel.getRoom(1), TILE*2, TILE*3));
-		entityList.addAll(superLevel.getRoomContents(0));
+		addObjects(superLevel.getRoomCollectibles(0));
 		entityList.add(new Bub(TILE*22, TILE*3, Mook.Type.WALK));
 		entityList.add(new Bub(TILE*37, TILE*3, Mook.Type.WALK));
 		entityList.add(new Bub(TILE*84, TILE*3, Mook.Type.WALK));

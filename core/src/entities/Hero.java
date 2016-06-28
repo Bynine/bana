@@ -3,11 +3,14 @@ package entities;
 import java.util.List;
 
 import main.Bana;
+import maps.Room;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.Animation.PlayMode;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Rectangle;
@@ -17,77 +20,93 @@ public class Hero extends Entity{
 
 	// CLASS PURPOSE: The hero. Only one should exist at a time.
 
-	private boolean flag_INTERACT, flag_HIT;
+	private boolean flag_INTERACT, flag_LANDEDHIT;
 	private Timer attackTimer = new Timer(25);
-	private Sprite ground = new Sprite(new Texture(Gdx.files.internal("sprites/hero.PNG")));
-	private Sprite jumpSprite = new Sprite(new Texture(Gdx.files.internal("sprites/herojump.PNG")));
-	private Sprite kick = new Sprite(new Texture(Gdx.files.internal("sprites/herokick.PNG")));
+	private Sprite jumpImage = new Sprite(new Texture(Gdx.files.internal("sprites/herojump.PNG")));
+	private Sprite attackImage = new Sprite(new Texture(Gdx.files.internal("sprites/herokick.PNG")));
+	private Sprite hurtImage = new Sprite(new Texture(Gdx.files.internal("sprites/herohurt.PNG")));
+	private Animation walk = makeAnimation("sprites/herowalksheet.PNG", 4, 1, 8f, PlayMode.LOOP);
+	private Sprite standImage = new Sprite(walk.getKeyFrame(0));
 	private Sound jump = Gdx.audio.newSound(Gdx.files.internal("sfx/jump.mp3"));
 	private Sound doublejump = Gdx.audio.newSound(Gdx.files.internal("sfx/djump.mp3"));
 	private Hitbox kneeHitbox;
 	private float kickHitboxWidth = 10;
-
-	// TODO: change stun so it only affects movement, not key presses
+	private int wallet;
 
 	public Hero(float x, float y){
 		super(x, y);
-		stunTimer = new Timer(10);
+		stunTimer = new Timer(20);
 		invincibleTimer = new Timer(25);
 		facing = Facing.RIGHT;
 		maxHealth = 8;
+		acceleration = 1.1f;
 		health = maxHealth;
-		setImage("sprites/hero.PNG");
+		setImage(standImage);
 		hurt = Gdx.audio.newSound(Gdx.files.internal("sfx/herohurt.mp3"));
 		timerList.add(invincibleTimer);
 		timerList.add(attackTimer);
 		timerList.add(stunTimer);
 		jumpStrength = 9f;
-		maxSpeed = 4f;
 		kneeHitbox = new Hitbox(image.getWidth()-8, 8, kickHitboxWidth, image.getHeight());
 		hitboxList.add(kneeHitbox);
 	}
 
 	public void updateImage(){
 		super.updateImage();
-		if (!stunTimer.stopped()) updateImage(kick); // TODO: make stunned anim
-		else if (!attackTimer.stopped()) updateImage(kick);
-		else if (state == State.JUMP || state == State.DOUBLEJUMP || isFalling()) updateImage(jumpSprite);
-		else updateImage(ground);
-		// TODO: Add animated sprites for each state and different velocities. Differing animations for jump/dj to avoid confusion a la Smash Bros
+		if (!stunTimer.stopped()) changeImage(hurtImage);
+		else if (!attackTimer.stopped()) changeImage(attackImage);
+		else if (state == State.JUMP || state == State.DOUBLEJUMP || isFalling()) changeImage(jumpImage);
+		else if (flag_GOLEFT || flag_GORIGHT) changeImage(walk.getKeyFrame(deltaTime));
+		else changeImage(standImage);
+		// TODO: Animations
 	}
 
-	public void updateVelocity(List<Rectangle> mapRectangleList, List<Entity> entityList, float gravity, int deltaTime){
+	public void updateVelocity(List<Rectangle> mapRectangleList, List<Entity> entityList, Room room, int deltaTime){
 		checkTouch(entityList);
-		super.updateVelocity(mapRectangleList, entityList, gravity, deltaTime);
+		super.updateVelocity(mapRectangleList, entityList, room, deltaTime);
 	}
 
 	private void checkTouch(List<Entity> entityList) {
-		Rectangle thisR = image.getBoundingRectangle();
-		thisR.setX(thisR.getX() + velocity.x);
-		thisR.setY(thisR.getY() + velocity.y);
 		for (Entity en: entityList){
-			if (kneeHitbox.isActive() && Intersector.overlaps(en.getImage().getBoundingRectangle(), kneeHitbox.getRectangle())){
-				if (en.canBeHit()){
-					flag_HIT = true;
-					en.takeDamage(this);
-				}
-			}
-			if (!flag_HIT && Intersector.overlaps(en.getImage().getBoundingRectangle(), thisR)){
-				if (canJumpOnEnemy(en) && en.canBeHit()) {
-					flag_HIT = true;
-					if (!en.isRockhead()) en.takeDamage(this);
-					if (state == State.DOUBLEJUMP) state = State.JUMP;
-				}
-				else if (en.isEnemy() && !flag_HIT && en.invincibleTimer.stopped()) takeDamage(en);
-			}
+			checkKnee(en);
+			checkTrounce(en);
+			checkHit(en);
 		}
 		if (invincibleTimer.stopped()) stopInvincible();
 		if (attackTimer.stopped()) kneeHitbox.deactivate();
-		flag_HIT = false;
+		flag_LANDEDHIT = false;
 	}
-	private boolean canJumpOnEnemy(Entity en){
+	private boolean canTrounceEnemy(Entity en){
 		if ((position.y - en.getPosition().y) > en.getImage().getHeight()*.75f) return true;
 		return false;
+	}
+	private Rectangle getNextRectangle(){
+		Rectangle thisR = image.getBoundingRectangle();
+		thisR.setX(thisR.getX() + velocity.x);
+		thisR.setY(thisR.getY() + velocity.y);
+		return thisR;
+	}
+	private void checkKnee(Entity en){
+		final boolean kneeIntersects = (kneeHitbox.isActive() && Intersector.overlaps(en.getImage().getBoundingRectangle(), kneeHitbox.getRectangle()));
+		if (kneeIntersects && en.canBeAttacked()){
+			flag_LANDEDHIT = true;
+			en.takeDamage(this);
+		}
+	}
+	private void checkTrounce(Entity en){
+		if (!flag_LANDEDHIT && Intersector.overlaps(en.getImage().getBoundingRectangle(), getNextRectangle())){
+			if (canTrounceEnemy(en) && en.canBeTrounced()) {
+				flag_LANDEDHIT = true;
+				if (en.isHurthead()) this.takeDamage(en);
+				else if (!en.isRockhead()) en.takeDamage(this);
+				state = State.JUMP;
+			}
+		}
+	}
+	private void checkHit(Entity en){
+		if (!flag_LANDEDHIT && Intersector.overlaps(en.getImage().getBoundingRectangle(), image.getBoundingRectangle())){
+			if (en.isEnemy() && !flag_LANDEDHIT && en.invincibleTimer.stopped()) takeDamage(en);
+		}
 	}
 
 	void takeDamage(Entity en){
@@ -163,7 +182,7 @@ public class Hero extends Entity{
 		flag_INTERACT = true;
 	}
 	private void attack(){
-		int kickSpeed = 20;
+		int kickSpeed = 8;
 		if (state == State.GROUND) velocity.y += 4;
 		if (facing == Facing.RIGHT) velocity.x += kickSpeed;
 		if (facing == Facing.LEFT) velocity.x += -kickSpeed;
@@ -180,20 +199,21 @@ public class Hero extends Entity{
 		updateImage();
 		kneeHitbox.set();
 	}
-	
+
 	void setTiny(){
 		image.setSize(8, 12);
 		jumpStrength = 7f;
 		fallSpeed = 0.3f;
 		// make attack hitbox smaller
+		// speed up sfx
 	}
-	
 	void setHuge(){
 		image.setSize(40, 90);
 		damage = 4;
 		jumpStrength = 12f;
 		fallSpeed = 0.7f;
 		// make attack hitbox bigger
+		// slow down sfx
 	}
 
 	public void stop(){
@@ -214,6 +234,9 @@ public class Hero extends Entity{
 		health = maxHealth;
 	}
 	public boolean isInteracting(){ return flag_INTERACT; }
+	public int getWallet() { return wallet; }
+	public void addMoney(int money){ wallet += money; }
+	public void emptyWallet(){ wallet = 0; }
 
 	enum Forms{
 		NORMAL, // standard state

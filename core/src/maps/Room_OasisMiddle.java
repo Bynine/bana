@@ -18,9 +18,13 @@ public class Room_OasisMiddle extends Room{
 	public void initEntities(Hero hero) {
 		super.initEntities(hero);
 		entityList.add(new Door(TILE*2, TILE*3, superLevel.getRoom(0), TILE*93, TILE*3));
-		entityList.add(new Door(TILE*12, TILE*3, superLevel.getRoom(2), TILE*3, TILE*3));
+		entityList.add(new Door(TILE*28, TILE*3, superLevel.getRoom(2), TILE*3, TILE*3));
 		entityList.add(Level_Oasis.getArtifact());
-		entityList.addAll(superLevel.getRoomContents(1));
+		addObjects(superLevel.getRoomCollectibles(1));
+		Trapdoor trapdoor = new Trapdoor(TILE*14, TILE*7);
+		entityList.add(trapdoor);
+		entityList.add(new Switch(TILE*7, TILE*6, trapdoor));
+		entityList.add(new Whump(TILE*25, TILE*7.5f));
 		setup();
 	}
 }
