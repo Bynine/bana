@@ -163,7 +163,7 @@ public abstract class Entity {
 	void takeDamage(Entity en){
 		if (invincibleTimer.stopped()) {
 			health -= en.damage;
-			takeKnockback(en, 16f+(en.damage*4f), 6, false);
+			takeKnockback(en, 12f+(en.damage*6f), 6, false);
 			if (en.damage > 0) {
 				hurt.play(Bana.getVolume());
 				invincibleTimer.set();
@@ -176,6 +176,7 @@ public abstract class Entity {
 	}
 	void takeKnockback(Entity en, float x, float y, boolean done){
 		if (!done && !en.isImmune() && (this.isEnemy() || this.getClass() == Hero.class)) en.takeKnockback(this, x/2, y/2, true);
+		if (en.knockback == 0) return;
 		float knockbackX = en.knockback*x/density;
 		float knockbackY = en.knockback*y/density;
 		knockbackX *= Math.random()+.5;
@@ -203,6 +204,15 @@ public abstract class Entity {
 		fallSpeed = 0.5f;
 		friction = 1;
 		collision = Collision.GHOST;
+	}
+	void tremor(Entity en){
+		if (flag_HITGROUND && this.isThisCloseTo(en, 320) && this.state == State.GROUND) {
+			flag_HITGROUND = false;
+			if (en.state == State.GROUND) {
+				en.velocity.y += 3*density; 
+				en.state = State.JUMP;
+			}
+		}
 	}
 
 	void setImage(String path){
@@ -308,16 +318,8 @@ public abstract class Entity {
 	}
 
 	public void reactToAll(Entity en) {
-		//tremor(en);
+		if (isHeavy()) tremor(en);
 	}
-
-	//	private void tremor(Entity en){ // TODO: Bugfix. Launches twice, and thiscloseto seems buggy
-	//		if (flag_HITGROUND && isHeavy() && this.isThisCloseTo(en, 320) && en.state == State.GROUND && en.does_MOVE) {
-	//			en.state = State.JUMP;
-	//			flag_HITGROUND = false;
-	//			en.velocity.y += 2*density; 
-	//		}
-	//	}
 
 	Animation makeAnimation(String address, int cols, int rows, float speed, PlayMode playMode){
 		Texture sheet = new Texture(Gdx.files.internal(address));

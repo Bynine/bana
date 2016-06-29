@@ -33,7 +33,7 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 		cam.setToOrtho(false, SCREENWIDTH/SCREEN, SCREENHEIGHT/SCREEN);
 		state = State.GAME;
 		activeLevel = new Level_Oasis();
-		Room startingRoom = activeLevel.getRoom(1);
+		Room startingRoom = activeLevel.getRoom(0);
 		hero = new Hero(startingRoom.getStartPosition().x, startingRoom.getStartPosition().y);
 		changeRoom(startingRoom, startingRoom.getStartPosition(), true);
 		Gdx.gl.glClearColor(222f/256f, 238f/256f, 214f/256f, 213f/256f); // 16 color palette's lightest color

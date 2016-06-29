@@ -29,6 +29,7 @@ public class Hero extends Entity{
 	private Sprite standImage = new Sprite(walk.getKeyFrame(0));
 	private Sound jump = Gdx.audio.newSound(Gdx.files.internal("sfx/jump.mp3"));
 	private Sound doublejump = Gdx.audio.newSound(Gdx.files.internal("sfx/djump.mp3"));
+	private Sound attack = Gdx.audio.newSound(Gdx.files.internal("sfx/attack5.mp3"));
 	private Hitbox kneeHitbox;
 	private float kickHitboxWidth = 10;
 	private int wallet;
@@ -39,7 +40,7 @@ public class Hero extends Entity{
 		invincibleTimer = new Timer(25);
 		facing = Facing.RIGHT;
 		maxHealth = 8;
-		acceleration = 1.1f;
+		acceleration = 1f;
 		health = maxHealth;
 		setImage(standImage);
 		hurt = Gdx.audio.newSound(Gdx.files.internal("sfx/herohurt.mp3"));
@@ -58,7 +59,6 @@ public class Hero extends Entity{
 		else if (state == State.JUMP || state == State.DOUBLEJUMP || isFalling()) changeImage(jumpImage);
 		else if (flag_GOLEFT || flag_GORIGHT) changeImage(walk.getKeyFrame(deltaTime));
 		else changeImage(standImage);
-		// TODO: Animations
 	}
 
 	public void updateVelocity(List<Rectangle> mapRectangleList, List<Entity> entityList, Room room, int deltaTime){
@@ -182,6 +182,7 @@ public class Hero extends Entity{
 		flag_INTERACT = true;
 	}
 	private void attack(){
+		attack.play(Bana.getVolume()); // TODO: Don't play when going through doors
 		int kickSpeed = 8;
 		if (state == State.GROUND) velocity.y += 4;
 		if (facing == Facing.RIGHT) velocity.x += kickSpeed;
@@ -193,6 +194,7 @@ public class Hero extends Entity{
 	public void moveToStart(Vector2 vector){
 		stopInvincible();
 		resetTimers();
+		attack.stop();
 		position.x = vector.x;
 		position.y = vector.y;
 		center();

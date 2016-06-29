@@ -68,6 +68,7 @@ public abstract class Room {
 		clearOut();
 		if (entityList.contains(hero)) entityList.remove(hero);
 		entityList.add(hero);
+		roomMusic.setLooping(true);
 		roomMusic.play();
 	}
 	void clearOut(){

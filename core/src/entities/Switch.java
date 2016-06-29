@@ -12,7 +12,9 @@ public class Switch extends Entity{
 		setImage("sprites/switch.PNG");
 		density = 3f;
 		does_MOVE = false;
-		is_DESTRUCTABLE = true;
+		is_ENEMY = true;
+		is_ROCKHEAD = true;
+		damage = 0;
 	}
 	
 	@Override
