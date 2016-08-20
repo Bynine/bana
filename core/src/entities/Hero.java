@@ -22,22 +22,24 @@ public class Hero extends Entity{
 
 	private boolean flag_INTERACT, flag_LANDEDHIT;
 	private Timer attackTimer = new Timer(25);
-	private Sprite jumpImage = new Sprite(new Texture(Gdx.files.internal("sprites/herojump.PNG")));
-	private Sprite attackImage = new Sprite(new Texture(Gdx.files.internal("sprites/herokick.PNG")));
-	private Sprite hurtImage = new Sprite(new Texture(Gdx.files.internal("sprites/herohurt.PNG")));
-	private Animation walk = makeAnimation("sprites/herowalksheet.PNG", 4, 1, 8f, PlayMode.LOOP);
-	private Sprite standImage = new Sprite(walk.getKeyFrame(0));
+	Sprite jumpImage = new Sprite(new Texture(Gdx.files.internal("sprites/herojump.PNG")));
+	Sprite attackImage = new Sprite(new Texture(Gdx.files.internal("sprites/herokick.PNG")));
+	Sprite hurtImage = new Sprite(new Texture(Gdx.files.internal("sprites/herohurt.PNG")));
+	Animation walk = makeAnimation("sprites/herowalksheet.PNG", 4, 1, 8f, PlayMode.LOOP);
+	Sprite standImage = new Sprite(walk.getKeyFrame(0));
 	private Sound jump = Gdx.audio.newSound(Gdx.files.internal("sfx/jump.mp3"));
 	private Sound doublejump = Gdx.audio.newSound(Gdx.files.internal("sfx/djump.mp3"));
 	private Sound attack = Gdx.audio.newSound(Gdx.files.internal("sfx/attack5.mp3"));
 	private Hitbox kneeHitbox;
 	private float kickHitboxWidth = 10;
 	private int wallet;
+	private Bana bana;
 
-	public Hero(float x, float y){
+	public Hero(float x, float y, Bana bana){
 		super(x, y);
-		stunTimer = new Timer(20);
-		invincibleTimer = new Timer(25);
+		this.bana = bana;
+		stunTimer = new Timer(16);
+		invincibleTimer = new Timer(24);
 		facing = Facing.RIGHT;
 		maxHealth = 8;
 		acceleration = 1f;
@@ -47,7 +49,7 @@ public class Hero extends Entity{
 		timerList.add(invincibleTimer);
 		timerList.add(attackTimer);
 		timerList.add(stunTimer);
-		jumpStrength = 9f;
+		jumpStrength = 10f;
 		kneeHitbox = new Hitbox(image.getWidth()-8, 8, kickHitboxWidth, image.getHeight());
 		hitboxList.add(kneeHitbox);
 	}
@@ -68,6 +70,7 @@ public class Hero extends Entity{
 
 	private void checkTouch(List<Entity> entityList) {
 		for (Entity en: entityList){
+			checkDoor(en);
 			checkKnee(en);
 			checkTrounce(en);
 			checkHit(en);
@@ -76,15 +79,11 @@ public class Hero extends Entity{
 		if (attackTimer.stopped()) kneeHitbox.deactivate();
 		flag_LANDEDHIT = false;
 	}
-	private boolean canTrounceEnemy(Entity en){
-		if ((position.y - en.getPosition().y) > en.getImage().getHeight()*.75f) return true;
-		return false;
-	}
-	private Rectangle getNextRectangle(){
-		Rectangle thisR = image.getBoundingRectangle();
-		thisR.setX(thisR.getX() + velocity.x);
-		thisR.setY(thisR.getY() + velocity.y);
-		return thisR;
+	private void checkDoor(Entity en){
+		if (en.getClass() == Door.class && this.isOverlapping(en) && flag_INTERACT){
+			Door door = (Door) en;
+			bana.changeRoom(door.getRoom(), door.getDestination(), true);
+		}
 	}
 	private void checkKnee(Entity en){
 		final boolean kneeIntersects = (kneeHitbox.isActive() && Intersector.overlaps(en.getImage().getBoundingRectangle(), kneeHitbox.getRectangle()));
@@ -107,6 +106,28 @@ public class Hero extends Entity{
 		if (!flag_LANDEDHIT && Intersector.overlaps(en.getImage().getBoundingRectangle(), image.getBoundingRectangle())){
 			if (en.isEnemy() && !flag_LANDEDHIT && en.invincibleTimer.stopped()) takeDamage(en);
 		}
+	}
+	
+	@Override
+	void checkWalls(List<Rectangle> mapRectangleList){
+		for (int i = 0; i < collisionCheck; ++i)
+			if (collisionDetection(position.x + velocity.x, position.y, mapRectangleList)){
+				velocity.x *= softening;
+			}
+		if (collisionDetection(position.x + velocity.x, position.y, mapRectangleList)) {
+			velocity.x = 0;
+		}
+	}
+	
+	private boolean canTrounceEnemy(Entity en){
+		if ((position.y - en.getPosition().y) > en.getImage().getHeight()*.75f) return true;
+		return false;
+	}
+	private Rectangle getNextRectangle(){
+		Rectangle thisR = image.getBoundingRectangle();
+		thisR.setX(thisR.getX() + velocity.x);
+		thisR.setY(thisR.getY() + velocity.y);
+		return thisR;
 	}
 
 	void takeDamage(Entity en){
@@ -160,8 +181,8 @@ public class Hero extends Entity{
 		facing = Facing.RIGHT;
 	}
 	private void pressAction(){
-		if ((state == State.JUMP || isFalling()) && state != State.DOUBLEJUMP) { // goes first to avoid being called simultaneously w/ jump
-			doubleJump(); 
+		if ((state == State.JUMP || isFalling())) { // goes first to avoid being called simultaneously w/ jump
+			doubleJump();
 			return; // prevents jump from being called afterwards
 		}
 		if (state != State.JUMP && state != State.DOUBLEJUMP && !isFalling()) {
@@ -183,7 +204,7 @@ public class Hero extends Entity{
 	}
 	private void attack(){
 		attack.play(Bana.getVolume()); // TODO: Don't play when going through doors
-		int kickSpeed = 8;
+		int kickSpeed = 10;
 		if (state == State.GROUND) velocity.y += 4;
 		if (facing == Facing.RIGHT) velocity.x += kickSpeed;
 		if (facing == Facing.LEFT) velocity.x += -kickSpeed;
@@ -201,22 +222,47 @@ public class Hero extends Entity{
 		updateImage();
 		kneeHitbox.set();
 	}
-
-	void setTiny(){
-		image.setSize(8, 12);
-		jumpStrength = 7f;
-		fallSpeed = 0.3f;
-		// make attack hitbox smaller
-		// speed up sfx
-	}
-	void setHuge(){
-		image.setSize(40, 90);
-		damage = 4;
-		jumpStrength = 12f;
-		fallSpeed = 0.7f;
-		// make attack hitbox bigger
-		// slow down sfx
-	}
+	
+//	void transform(Form form){
+//		switch(form){
+//		case HUGE: setHuge(); break;
+//		case TINY: setTiny(); break;
+//		default: break;
+//		}
+//	}
+//
+//	enum Form{
+//		NORMAL, // standard state
+//		FLY, // can fly (no double jump limiter)
+//		HONEY, // covered in honey. Slow movement, distracts bees & bears.
+//		HUGE, // very big. can smash through hard blocks
+//		TINY, // very small. Lower gravity and can fit into tiny areas.
+//		COCONUT, // can roll through small passages
+//	}
+//	
+//	void setTiny(){
+//		image.setSize(8, 12);
+//		jumpStrength = 7f;
+//		fallSpeed = 0.3f;
+//		// make attack hitbox smaller
+//		// speed up sfx
+//	}
+//	void setHuge(){
+//		image.setSize(40, 90);
+//		damage = 4;
+//		jumpStrength = 12f;
+//		fallSpeed = 0.7f;
+//		// make attack hitbox bigger
+//		// slow down sfx
+//	}
+//	void setCoconut(){
+//		Animation coconut = makeAnimation("sprites/herowalksheet.PNG", 4, 1, 8f, PlayMode.LOOP);
+//		setImage(coconut.getKeyFrame(0));
+//		walk = coconut;
+//	}
+//	void setNormal(){
+//		
+//	}
 
 	public void stop(){
 		super.stop();
@@ -239,12 +285,4 @@ public class Hero extends Entity{
 	public int getWallet() { return wallet; }
 	public void addMoney(int money){ wallet += money; }
 	public void emptyWallet(){ wallet = 0; }
-
-	enum Forms{
-		NORMAL, // standard state
-		FLY, // can fly (no double jump limiter)
-		HONEY, // covered in honey. Slow movement, distracts bees & bears.
-		GIANT, // very big. can smash through hard blocks
-		TINY, // very small. Lower gravity and can fit into tiny areas.
-	}
 }

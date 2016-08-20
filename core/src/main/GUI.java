@@ -11,12 +11,16 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 
 import entities.Hero;
 
 public class GUI {
-	private BitmapFont fontNormal;
-	private BitmapFont fontSpecial;
+	private final BitmapFont fontNormal;
+	private final BitmapFont fontSpecial;
+	private final FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("sprites/font.ttf"));
+	private final FreeTypeFontParameter parameter = new FreeTypeFontParameter();
 	private final Sprite heart = new Sprite(new Texture(Gdx.files.internal("sprites/heart.PNG")));
 	private final Sprite emptyHeart = new Sprite(new Texture(Gdx.files.internal("sprites/heartEmpty.PNG")));
 	private final Sprite coin = new Sprite(new Texture(Gdx.files.internal("sprites/money.PNG")));
@@ -31,10 +35,10 @@ public class GUI {
 	private Batch batch;
 	
 	GUI(){
-		fontNormal = new BitmapFont();
-		fontNormal.setColor(Color.WHITE);
-		fontSpecial = new BitmapFont();
-		fontSpecial.setColor(Color.YELLOW);
+		parameter.size = 20;
+		fontNormal = generator.generateFont(parameter);
+		parameter.color = Color.YELLOW;
+		fontSpecial = generator.generateFont(parameter);
 	}
 
 	void drawGUI(SpriteBatch batch, Hero hero, Camera cam, Level level) {

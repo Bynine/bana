@@ -1,7 +1,5 @@
 package entities;
 
-import com.badlogic.gdx.math.Intersector;
-
 public class Switch extends Entity{
 	
 	Trapdoor trapdoor;
@@ -13,17 +11,12 @@ public class Switch extends Entity{
 		density = 3f;
 		does_MOVE = false;
 		is_ENEMY = true;
-		is_ROCKHEAD = true;
 		damage = 0;
 	}
 	
 	@Override
 	public void reactToAll(Entity en) {
-		for(Hitbox hitbox: en.hitboxList){
-			if (Intersector.overlaps(hitbox.getRectangle(), image.getBoundingRectangle()) && hitbox.isActive()){
-				trapdoor.activate();
-			}
-		}
+		if (flag_DEAD) trapdoor.activate();
 	}
 
 }

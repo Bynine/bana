@@ -25,7 +25,7 @@ public abstract class Entity {
 	float acceleration = 1.2f;
 	float maxSpeed = 16f;
 	float friction = 0.8f;
-	float fallSpeed = 0.5f;
+	float fallSpeed = 0.6f;
 	float density = 1;
 	float jumpStrength = 10f;
 	float terminalVelocity = -10f;
@@ -48,8 +48,8 @@ public abstract class Entity {
 	final List<Hitbox> hitboxList = new ArrayList<>();
 	private final List<Effect> effects = new ArrayList<>();
 
-	private final int collisionCheck = 4;
-	private final float softening = .8f;
+	protected final int collisionCheck = 4;
+	protected final float softening = .8f;
 	public static final int TILE = Bana.TILE;
 	final List<Rectangle> tempRectangleList = new ArrayList<Rectangle>();
 
@@ -97,6 +97,9 @@ public abstract class Entity {
 		checkWalls(tempRectangleList);
 		checkGrounded(tempRectangleList);
 		checkDiagonal(tempRectangleList);
+		friction();
+	}
+	void friction(){
 		if (Math.abs(velocity.x) < 0.1) velocity.x = 0;
 		if (Math.abs(velocity.y) < 0.1) velocity.y = 0;
 		velocity.x*=friction;

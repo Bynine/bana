@@ -18,7 +18,6 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
-import entities.Door;
 import entities.Entity;
 import entities.Hero;
 
@@ -26,18 +25,13 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 
 	final static int SCREEN = 2;
 	private static float volume = 0.0f;
-	@Override
-	public void create () {
-		gui = new GUI();
-		batch = new SpriteBatch();
-		cam.setToOrtho(false, SCREENWIDTH/SCREEN, SCREENHEIGHT/SCREEN);
+	private void startGame(){
 		state = State.GAME;
-		activeLevel = new Level_Oasis();
+		activeLevel = new Level_Test();
 		Room startingRoom = activeLevel.getRoom(0);
-		hero = new Hero(startingRoom.getStartPosition().x, startingRoom.getStartPosition().y);
+		hero = new Hero(startingRoom.getStartPosition().x, startingRoom.getStartPosition().y, this);
 		changeRoom(startingRoom, startingRoom.getStartPosition(), true);
 		Gdx.gl.glClearColor(222f/256f, 238f/256f, 214f/256f, 213f/256f); // 16 color palette's lightest color
-		Gdx.input.setInputProcessor(this);
 	}
 	private final OrthographicCamera cam = new OrthographicCamera();
 	public static final int SCREENWIDTH  = 480*SCREEN;
@@ -57,22 +51,33 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 	private Room activeRoom;
 	private GUI gui;
 	private final List<Rectangle> rectangleList = new ArrayList<>();
-	private final List<Door> activeDoors = new ArrayList<>();
-
 	private boolean flag_PAUSE;
-
+	
+	@Override
+	public void create () {
+		gui = new GUI();
+		batch = new SpriteBatch();
+		cam.setToOrtho(false, SCREENWIDTH/SCREEN, SCREENHEIGHT/SCREEN);
+		Gdx.input.setInputProcessor(this);
+		startGame();
+	}
 	@Override
 	public void render () {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-		if (!flag_PAUSE) updateEntities(activeRoom.getEntityList(), deltaTime);
-		updateCamera();
-		drawGraphics(activeRoom.getEntityList());
-		if (!flag_PAUSE) gui.drawGUI(batch, hero, cam, activeLevel);
-		if (!flag_PAUSE) deltaTime++;
+		switch(state){
+		case GAME:
+			if (!flag_PAUSE) updateEntities(activeRoom.getEntityList(), deltaTime);
+			updateCamera();
+			drawGraphics(activeRoom.getEntityList());
+			if (!flag_PAUSE) gui.drawGUI(batch, hero, cam, activeLevel);
+			if (!flag_PAUSE) deltaTime++;
+			break;
+		case MENU: break;
+		default: break;
+		}
 	}
 
 	private void updateEntities(List<Entity> entityList, int deltaTime){
-		checkForDoors();
 		for (Entity en : entityList){
 			if (en.isOutOfBounds(mapWidth) || en.isDestroyed()){
 				if (en.getClass() == Hero.class) { restartLevel(); break; }
@@ -90,13 +95,6 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 		}
 		rectangleList.clear();
 		rectangleList.addAll(activeRoom.getRectangleList());
-	}
-
-	private void checkForDoors(){
-		for (Door door: activeDoors) if (hero.isOverlapping(door) && hero.isInteracting()) {
-			changeRoom(door.getRoom(), door.getDestination(), true);
-			break;
-		}
 	}
 
 	private void updateCamera(){
@@ -147,7 +145,7 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 		changeRoom(activeLevel.getRoom(0), activeLevel.getRoom(0).getStartPosition(), true);
 	}
 
-	private void changeRoom (Room room, Vector2 vector, boolean resetCamera) {
+	public void changeRoom (Room room, Vector2 vector, boolean resetCamera) {
 		deltaTime = 0; // resets the timer for all movement based time things
 		hero.stop();
 		if (activeRoom != null && activeRoom.getMusic() != room.getMusic()) activeRoom.stopMusic();
@@ -166,10 +164,6 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 		mapHeight = map.getProperties().get("height", Integer.class)*TILE;
 		rectangleList.clear();
 		rectangleList.addAll(activeRoom.getRectangleList());
-		activeDoors.clear();
-		for (Entity en: activeRoom.getEntityList()){
-			if (en.getClass() == Door.class) activeDoors.add((Door)en);
-		}
 	}
 
 	public static float getVolume(){
@@ -179,8 +173,9 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 	@Override
 	public boolean keyDown(int keycode) {
 		if (!flag_PAUSE && state == State.GAME) hero.keyDown(keycode);
+		if (state == State.MENU && keycode == Keys.ENTER) startGame();
 		switch(keycode){
-		case Keys.SHIFT_LEFT: pauseGame(); break;
+		case Keys.SHIFT_LEFT: if (state == State.GAME) pauseGame(); break;
 		default: break;
 		}
 		return false;
@@ -188,7 +183,7 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 
 	@Override
 	public boolean keyUp(int keycode) {
-		if (!flag_PAUSE) hero.keyUp(keycode);
+		if (!flag_PAUSE && state == State.GAME) hero.keyUp(keycode);
 		return false;
 	}
 
