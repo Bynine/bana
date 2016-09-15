@@ -18,22 +18,22 @@ import com.badlogic.gdx.math.Vector2;
 
 public class Hero extends Entity{
 
-	// CLASS PURPOSE: The hero. Only one should exist at a time.
-
 	private boolean flag_INTERACT, flag_LANDEDHIT;
-	private Timer attackTimer = new Timer(25);
+	private Timer attackTimer = new Timer(20);
+	private Timer slideTimer = new Timer(20);
 	Sprite jumpImage = new Sprite(new Texture(Gdx.files.internal("sprites/herojump.PNG")));
 	Sprite attackImage = new Sprite(new Texture(Gdx.files.internal("sprites/herokick.PNG")));
 	Sprite hurtImage = new Sprite(new Texture(Gdx.files.internal("sprites/herohurt.PNG")));
+	Sprite slideImage = new Sprite(new Texture(Gdx.files.internal("sprites/slide.PNG")));
 	Animation walk = makeAnimation("sprites/herowalksheet.PNG", 4, 1, 8f, PlayMode.LOOP);
 	Sprite standImage = new Sprite(walk.getKeyFrame(0));
 	private Sound jump = Gdx.audio.newSound(Gdx.files.internal("sfx/jump.mp3"));
 	private Sound doublejump = Gdx.audio.newSound(Gdx.files.internal("sfx/djump.mp3"));
 	private Sound attack = Gdx.audio.newSound(Gdx.files.internal("sfx/attack5.mp3"));
 	private Hitbox kneeHitbox;
-	private float kickHitboxWidth = 10;
 	private Wallet wallet;
 	private Bana bana;
+	private int heldInput, currentInput;
 
 	public Hero(float x, float y, Bana bana){
 		super(x, y);
@@ -50,14 +50,16 @@ public class Hero extends Entity{
 		timerList.add(invincibleTimer);
 		timerList.add(attackTimer);
 		timerList.add(stunTimer);
+		timerList.add(slideTimer);
 		jumpStrength = 10f;
-		kneeHitbox = new Hitbox(image.getWidth()-8, 8, kickHitboxWidth, image.getHeight());
+		kneeHitbox = new Hitbox(image.getWidth()-8, 8, 10, image.getHeight());
 		hitboxList.add(kneeHitbox);
 	}
 
 	public void updateImage(){
 		super.updateImage();
 		if (!stunTimer.stopped()) changeImage(hurtImage);
+		if (!slideTimer.stopped()) changeImage(slideImage);
 		else if (!attackTimer.stopped()) changeImage(attackImage);
 		else if (state == State.JUMP || state == State.DOUBLEJUMP || isFalling()) changeImage(jumpImage);
 		else if (flag_GOLEFT || flag_GORIGHT) changeImage(walk.getKeyFrame(deltaTime));
@@ -65,8 +67,30 @@ public class Hero extends Entity{
 	}
 
 	public void updateVelocity(List<Rectangle> mapRectangleList, List<Entity> entityList, Room room, int deltaTime){
+		checkHeldInput();
 		checkTouch(entityList);
 		super.updateVelocity(mapRectangleList, entityList, room, deltaTime);
+	}
+	
+	private void checkHeldInput(){
+		if (heldInput == currentInput && canExecuteInput()){
+			keyDown(heldInput);
+			heldInput = 0;
+		}
+	}
+	private boolean canExecuteInput(){
+		return slideTimer.stopped();
+	}
+	
+	@Override
+	void updateSpeed(){
+		if (!slideTimer.stopped()) {
+			final double slideSpeed = 1;
+			if (facing == Facing.RIGHT) velocity.x += slideSpeed;
+			else			            velocity.x -= slideSpeed;
+			return;
+		}
+		super.updateSpeed();
 	}
 
 	private void checkTouch(List<Entity> entityList) {
@@ -109,17 +133,6 @@ public class Hero extends Entity{
 		}
 	}
 	
-	@Override
-	void checkWalls(List<Rectangle> mapRectangleList){
-		for (int i = 0; i < collisionCheck; ++i)
-			if (collisionDetection(position.x + velocity.x, position.y, mapRectangleList)){
-				velocity.x *= softening;
-			}
-		if (collisionDetection(position.x + velocity.x, position.y, mapRectangleList)) {
-			velocity.x = 0;
-		}
-	}
-	
 	private boolean canTrounceEnemy(Entity en){
 		if ((position.y - en.getPosition().y) > en.getImage().getHeight()*.75f) return true;
 		return false;
@@ -142,8 +155,15 @@ public class Hero extends Entity{
 	private void stopInvincible(){
 		image.setAlpha(1f);
 	}
+	
+	@Override
+	void takeKnockback(Entity en, float x, float y, boolean done){
+		super.takeKnockback(en, x, y, done);
+		slideTimer.reset();
+	}
 
 	public boolean keyUp(int keycode) {
+		if (currentInput == keycode) currentInput = 0;
 		switch(keycode){
 		case Keys.A:  flag_GOLEFT  = false; break;
 		case Keys.D:  flag_GORIGHT = false; break;
@@ -154,6 +174,7 @@ public class Hero extends Entity{
 		return false;
 	}
 	public boolean keyDown(int keycode) {
+		currentInput = keycode;
 		switch(keycode){
 		case Keys.A: pressLeft();  break;
 		case Keys.D: pressRight(); break;
@@ -164,6 +185,9 @@ public class Hero extends Entity{
 		return false;
 	}
 	private void pressLeft(){
+		if (!slideTimer.stopped()) {
+			holdInput(Keys.A); return;
+		}
 		flag_GOLEFT  = true;
 		flag_GORIGHT = false;
 		if (facing == Facing.RIGHT) {
@@ -173,6 +197,9 @@ public class Hero extends Entity{
 		facing = Facing.LEFT;
 	}
 	private void pressRight(){
+		if (!slideTimer.stopped()) {
+			holdInput(Keys.D); return;
+		}
 		flag_GORIGHT = true; 
 		flag_GOLEFT = false;
 		if (facing == Facing.LEFT) {
@@ -191,6 +218,9 @@ public class Hero extends Entity{
 			jump(); 
 		}
 	}
+	private void holdInput(int keycode){
+		heldInput = keycode;
+	}
 	private void doubleJump(){
 		doublejump.play(Bana.getVolume());
 		state = State.DOUBLEJUMP;
@@ -198,18 +228,23 @@ public class Hero extends Entity{
 	}
 	private void pressAttack(){
 		if (attackTimer.stopped()) {
-			attack();
 			attackTimer.set();
+			if (state == State.GROUND) groundAttack();
+			else airAttack();
 		}
 		flag_INTERACT = true;
 	}
-	private void attack(){
-		attack.play(Bana.getVolume()); // TODO: Don't play when going through doors
-		int kickSpeed = 10;
-		if (state == State.GROUND) velocity.y += 4;
-		if (facing == Facing.RIGHT) velocity.x += kickSpeed;
-		if (facing == Facing.LEFT) velocity.x += -kickSpeed;
-		if (state != State.DOUBLEJUMP) state = State.JUMP;
+	private void groundAttack(){
+		slideTimer.set();
+		int slideSpeed = 10;
+		if (facing == Facing.RIGHT) velocity.x += slideSpeed;
+		else velocity.x -= slideSpeed;
+		kneeHitbox.activate();
+	}
+	private void airAttack(){
+		int kneeSpeed = 10;
+		if (facing == Facing.RIGHT) velocity.x += kneeSpeed;
+		else velocity.x -= kneeSpeed;
 		kneeHitbox.activate();
 	}
 
