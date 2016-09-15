@@ -17,7 +17,7 @@ public class Coin extends Collectible {
 	
 	@Override
 	void behavior(Hero hero) {
-		hero.addMoney(value);
+		hero.getWallet().addMoney(value);
 	}
 
 	public enum Type{

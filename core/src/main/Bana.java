@@ -27,7 +27,7 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 	private static float volume = 0.0f;
 	private void startGame(){
 		state = State.GAME;
-		activeLevel = new Level_Test();
+		activeLevel = new Level_Oasis();
 		Room startingRoom = activeLevel.getRoom(0);
 		hero = new Hero(startingRoom.getStartPosition().x, startingRoom.getStartPosition().y, this);
 		changeRoom(startingRoom, startingRoom.getStartPosition(), true);
@@ -125,7 +125,7 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 		renderer.render(arr); // foreground layer
 		batch.begin();
 		for (Entity en : entityList){
-			if (en.isDead()) en.getImage().draw(batch); // draws dead enemies in the foremostground
+			if (en.isDead()) en.getImage().draw(batch); // draws KO'd enemies/objects in the foremostground
 		}
 		batch.end();
 	}
@@ -139,7 +139,7 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 
 	private void restartLevel(){
 		hero.reset();
-		hero.emptyWallet();
+		hero.getWallet().empty();
 		try { activeLevel = activeLevel.getClass().newInstance(); }
 		catch (InstantiationException | IllegalAccessException e) { e.printStackTrace(); }
 		changeRoom(activeLevel.getRoom(0), activeLevel.getRoom(0).getStartPosition(), true);

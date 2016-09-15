@@ -32,12 +32,13 @@ public class Hero extends Entity{
 	private Sound attack = Gdx.audio.newSound(Gdx.files.internal("sfx/attack5.mp3"));
 	private Hitbox kneeHitbox;
 	private float kickHitboxWidth = 10;
-	private int wallet;
+	private Wallet wallet;
 	private Bana bana;
 
 	public Hero(float x, float y, Bana bana){
 		super(x, y);
 		this.bana = bana;
+		wallet = new Wallet();
 		stunTimer = new Timer(16);
 		invincibleTimer = new Timer(24);
 		facing = Facing.RIGHT;
@@ -181,11 +182,11 @@ public class Hero extends Entity{
 		facing = Facing.RIGHT;
 	}
 	private void pressAction(){
-		if ((state == State.JUMP || isFalling())) { // goes first to avoid being called simultaneously w/ jump
+		if ((state == State.JUMP || (isFalling() && state != State.DOUBLEJUMP))) { // goes first to avoid being called simultaneously w/ jump
 			doubleJump();
 			return; // prevents jump from being called afterwards
 		}
-		if (state != State.JUMP && state != State.DOUBLEJUMP && !isFalling()) {
+		if (state == State.GROUND) {
 			jump.play(Bana.getVolume());
 			jump(); 
 		}
@@ -222,47 +223,6 @@ public class Hero extends Entity{
 		updateImage();
 		kneeHitbox.set();
 	}
-	
-//	void transform(Form form){
-//		switch(form){
-//		case HUGE: setHuge(); break;
-//		case TINY: setTiny(); break;
-//		default: break;
-//		}
-//	}
-//
-//	enum Form{
-//		NORMAL, // standard state
-//		FLY, // can fly (no double jump limiter)
-//		HONEY, // covered in honey. Slow movement, distracts bees & bears.
-//		HUGE, // very big. can smash through hard blocks
-//		TINY, // very small. Lower gravity and can fit into tiny areas.
-//		COCONUT, // can roll through small passages
-//	}
-//	
-//	void setTiny(){
-//		image.setSize(8, 12);
-//		jumpStrength = 7f;
-//		fallSpeed = 0.3f;
-//		// make attack hitbox smaller
-//		// speed up sfx
-//	}
-//	void setHuge(){
-//		image.setSize(40, 90);
-//		damage = 4;
-//		jumpStrength = 12f;
-//		fallSpeed = 0.7f;
-//		// make attack hitbox bigger
-//		// slow down sfx
-//	}
-//	void setCoconut(){
-//		Animation coconut = makeAnimation("sprites/herowalksheet.PNG", 4, 1, 8f, PlayMode.LOOP);
-//		setImage(coconut.getKeyFrame(0));
-//		walk = coconut;
-//	}
-//	void setNormal(){
-//		
-//	}
 
 	public void stop(){
 		super.stop();
@@ -281,8 +241,8 @@ public class Hero extends Entity{
 		}
 		health = maxHealth;
 	}
+	
+	public Wallet getWallet(){ return wallet; }
+	
 	public boolean isInteracting(){ return flag_INTERACT; }
-	public int getWallet() { return wallet; }
-	public void addMoney(int money){ wallet += money; }
-	public void emptyWallet(){ wallet = 0; }
 }

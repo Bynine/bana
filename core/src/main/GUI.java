@@ -48,7 +48,7 @@ public class GUI {
 		batch.begin();
 		drawArtifact(level);
 		drawHealth(hero);
-		drawMoney(hero.getWallet());
+		drawMoney(hero.getWallet().getMoney());
 		batch.end();
 	}
 	

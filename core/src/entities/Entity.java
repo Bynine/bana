@@ -317,8 +317,7 @@ public abstract class Entity {
 		JUMP, GROUND, DOUBLEJUMP, DAMAGE
 	}
 
-	public void reactToHero(Hero hero) {
-	}
+	public void reactToHero(Hero hero) { }
 
 	public void reactToAll(Entity en) {
 		if (isHeavy()) tremor(en);
