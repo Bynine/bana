@@ -1,5 +1,6 @@
 package entities;
 
+import java.util.Arrays;
 import java.util.List;
 
 import main.Bana;
@@ -15,6 +16,8 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+
+import entities.Entity.State;
 
 public class Hero extends Entity{
 
@@ -47,10 +50,7 @@ public class Hero extends Entity{
 		health = maxHealth;
 		setImage(standImage);
 		hurt = Gdx.audio.newSound(Gdx.files.internal("sfx/herohurt.mp3"));
-		timerList.add(invincibleTimer);
-		timerList.add(attackTimer);
-		timerList.add(stunTimer);
-		timerList.add(slideTimer);
+		timerList.addAll(Arrays.asList(invincibleTimer, attackTimer, stunTimer, slideTimer));
 		jumpStrength = 10f;
 		kneeHitbox = new Hitbox(image.getWidth()-8, 8, 10, image.getHeight());
 		hitboxList.add(kneeHitbox);
@@ -62,6 +62,7 @@ public class Hero extends Entity{
 		if (!slideTimer.stopped()) changeImage(slideImage);
 		else if (!attackTimer.stopped()) changeImage(attackImage);
 		else if (state == State.JUMP || state == State.DOUBLEJUMP || isFalling()) changeImage(jumpImage);
+		else if (state == State.CROUCH) changeImage(slideImage);
 		else if (flag_GOLEFT || flag_GORIGHT) changeImage(walk.getKeyFrame(deltaTime));
 		else changeImage(standImage);
 	}
@@ -79,15 +80,14 @@ public class Hero extends Entity{
 		}
 	}
 	private boolean canExecuteInput(){
-		return slideTimer.stopped();
+		return (slideTimer.stopped());
 	}
 	
 	@Override
 	void updateSpeed(){
 		if (!slideTimer.stopped()) {
 			final double slideSpeed = 1;
-			if (facing == Facing.RIGHT) velocity.x += slideSpeed;
-			else			            velocity.x -= slideSpeed;
+			velocity.x += facing()*slideSpeed;
 			return;
 		}
 		super.updateSpeed();
@@ -167,6 +167,7 @@ public class Hero extends Entity{
 		switch(keycode){
 		case Keys.A:  flag_GOLEFT  = false; break;
 		case Keys.D:  flag_GORIGHT = false; break;
+		case Keys.S: standUp(); break;
 		case Keys.SHIFT_RIGHT:  break;
 		case Keys.ENTER: flag_INTERACT = false; break;
 		default: break;
@@ -178,6 +179,7 @@ public class Hero extends Entity{
 		switch(keycode){
 		case Keys.A: pressLeft();  break;
 		case Keys.D: pressRight(); break;
+		case Keys.S: crouch(); break;
 		case Keys.SHIFT_RIGHT: if (stunTimer.stopped()) pressAction(); break;
 		case Keys.ENTER: if (stunTimer.stopped()) pressAttack(); break;
 		default: break;
@@ -185,8 +187,9 @@ public class Hero extends Entity{
 		return false;
 	}
 	private void pressLeft(){
-		if (!slideTimer.stopped()) {
-			holdInput(Keys.A); return;
+		if (!canExecuteInput()) {
+			holdInput(Keys.A); 
+			return;
 		}
 		flag_GOLEFT  = true;
 		flag_GORIGHT = false;
@@ -197,8 +200,9 @@ public class Hero extends Entity{
 		facing = Facing.LEFT;
 	}
 	private void pressRight(){
-		if (!slideTimer.stopped()) {
-			holdInput(Keys.D); return;
+		if (!canExecuteInput()) {
+			holdInput(Keys.D); 
+			return;
 		}
 		flag_GORIGHT = true; 
 		flag_GOLEFT = false;
@@ -213,10 +217,16 @@ public class Hero extends Entity{
 			doubleJump();
 			return; // prevents jump from being called afterwards
 		}
-		if (state == State.GROUND) {
+		if (flag_GROUNDED) {
 			jump.play(Bana.getVolume());
 			jump(); 
 		}
+	}
+	@Override
+	void jump(){
+		state = State.JUMP;
+		if (slideTimer.stopped()) velocity.y += jumpStrength;
+		else velocity.y += jumpStrength*.8f;
 	}
 	private void holdInput(int keycode){
 		heldInput = keycode;
@@ -224,28 +234,34 @@ public class Hero extends Entity{
 	private void doubleJump(){
 		doublejump.play(Bana.getVolume());
 		state = State.DOUBLEJUMP;
-		velocity.y = 3f*jumpStrength/4f;
+		velocity.y = jumpStrength*.8f;
 	}
 	private void pressAttack(){
 		if (attackTimer.stopped()) {
-			attackTimer.set();
-			if (state == State.GROUND) groundAttack();
+			if (flag_GROUNDED) dashAttack();
 			else airAttack();
 		}
 		flag_INTERACT = true;
 	}
-	private void groundAttack(){
+	private void dashAttack(){
 		slideTimer.set();
+		attackTimer.set();
 		int slideSpeed = 10;
-		if (facing == Facing.RIGHT) velocity.x += slideSpeed;
-		else velocity.x -= slideSpeed;
+		velocity.x += facing()*slideSpeed;
 		kneeHitbox.activate();
 	}
 	private void airAttack(){
-		int kneeSpeed = 10;
-		if (facing == Facing.RIGHT) velocity.x += kneeSpeed;
-		else velocity.x -= kneeSpeed;
+		attackTimer.set();
+		int kneeSpeed = 5;
+		velocity.x += facing()*kneeSpeed;
 		kneeHitbox.activate();
+	}
+	private void crouch(){
+		state = State.CROUCH;
+	}
+	private void standUp(){
+		// TODO: check for ceiling
+		state = State.STAND;
 	}
 
 	public void moveToStart(Vector2 vector){
@@ -263,9 +279,9 @@ public class Hero extends Entity{
 		super.stop();
 		flag_GOLEFT = false;
 		flag_GORIGHT = false;
-		resetTimers();
-		state = State.GROUND;
 		flag_INTERACT = false;
+		resetTimers();
+		state = State.STAND;
 	}
 	public void reset(){
 		stop();

@@ -23,7 +23,8 @@ public abstract class Entity {
 	final Vector2 position = new Vector2();
 	final Vector2 velocity = new Vector2();
 	float acceleration = 1.2f;
-	float maxSpeed = 16f;
+	float airacceleration = .7f;
+	float maxSpeed = 15f; // TODO: fix for various enemies who have it lowered to modify their speed
 	float friction = 0.8f;
 	float fallSpeed = 0.6f;
 	float density = 1;
@@ -36,7 +37,7 @@ public abstract class Entity {
 	int damage = 1;
 	int deltaTime = 0;
 	Collision collision;
-	boolean flag_GOLEFT, flag_GORIGHT, flag_TODESTROY, flag_DEAD, flag_HITGROUND;
+	boolean flag_GOLEFT, flag_GORIGHT, flag_TODESTROY, flag_DEAD, flag_HITGROUND, flag_GROUNDED;
 	boolean is_ENEMY, is_IMMUNE, does_MOVE, is_DESTRUCTABLE, is_ROCKHEAD, is_HURTHEAD;
 	Facing facing;
 	State state;
@@ -70,8 +71,10 @@ public abstract class Entity {
 
 	public void updatePosition(){
 		if (health <= 0 && this.getClass() != Hero.class && !flag_DEAD) die();
+		if (state == State.STAND || state == State.CROUCH) flag_GROUNDED = true;
+		else flag_GROUNDED = false;
 		if (does_MOVE){
-			position.x += velocity.x;
+			position.x += MathUtils.clamp(velocity.x, -maxSpeed, maxSpeed);
 			position.y += velocity.y;
 		}
 		for (Hitbox hitbox: hitboxList){
@@ -87,8 +90,14 @@ public abstract class Entity {
 		limitingForces(mapRectangleList, entityList, room);
 	}
 	void updateSpeed(){
-		if (flag_GOLEFT)  velocity.x-=acceleration;
-		if (flag_GORIGHT) velocity.x+=acceleration;
+		if (flag_GROUNDED){
+			if (flag_GOLEFT)  velocity.x-=acceleration;
+			if (flag_GORIGHT) velocity.x+=acceleration;
+		}
+		else{
+			if (flag_GOLEFT)  velocity.x-=airacceleration;
+			if (flag_GORIGHT) velocity.x+=airacceleration;
+		}
 	}
 	void limitingForces(List<Rectangle> mapRectangleList, List<Entity> entityList, Room room){
 		actWind(room.getWind());
@@ -102,8 +111,8 @@ public abstract class Entity {
 	void friction(){
 		if (Math.abs(velocity.x) < 0.1) velocity.x = 0;
 		if (Math.abs(velocity.y) < 0.1) velocity.y = 0;
-		velocity.x*=friction;
-		velocity.x = (MathUtils.clamp(velocity.x, -maxSpeed, maxSpeed)+velocity.x)/2f;
+		if (flag_GROUNDED) velocity.x*=friction;
+		else velocity.x*=(1-Math.pow((1-friction), 1.2));
 	}
 	void setupRectangles(List<Rectangle> mapRectangleList, List<Entity> entityList){
 		tempRectangleList.clear();
@@ -128,9 +137,9 @@ public abstract class Entity {
 		if (collisionDetection(position.x, position.y + velocity.y, mapRectangleList)) velocity.y = 0;
 	}
 	void makeGrounded(){
-		if ((state != State.GROUND || isFalling()) && does_MOVE){
+		if ((!flag_GROUNDED || isFalling()) && does_MOVE){
 			flag_HITGROUND = true;
-			state = State.GROUND;
+			state = State.STAND;
 		}
 	}
 	void checkDiagonal(List<Rectangle> mapRectangleList){
@@ -154,7 +163,7 @@ public abstract class Entity {
 		if (velocity.y < terminalVelocity*gravity) velocity.y = terminalVelocity*gravity;
 	}
 	private void actWind(float wind) {
-		if (state == State.GROUND) velocity.x+=wind/(2*density);
+		if (flag_GROUNDED) velocity.x+=wind/(2*density);
 		else velocity.x+=2*wind;
 	}
 
@@ -209,9 +218,9 @@ public abstract class Entity {
 		collision = Collision.GHOST;
 	}
 	void tremor(Entity en){
-		if (flag_HITGROUND && this.isThisCloseTo(en, 320) && this.state == State.GROUND) {
+		if (flag_HITGROUND && this.isThisCloseTo(en, 320) && flag_GROUNDED) {
 			flag_HITGROUND = false;
-			if (en.state == State.GROUND) {
+			if (en.flag_GROUNDED) {
 				en.velocity.y += 3*density; 
 				en.state = State.JUMP;
 			}
@@ -223,7 +232,8 @@ public abstract class Entity {
 		setImageHelper();
 	}
 	void setImage(TextureRegion tr){
-		image = new Sprite(tr);
+		try {if (!tr.getTexture().equals(image.getTexture())) image = new Sprite(tr);}
+		catch (NullPointerException e){image = new Sprite(tr);}
 		setImageHelper();
 	}
 	private void setImageHelper(){
@@ -313,14 +323,15 @@ public abstract class Entity {
 
 	public List<Effect> getEffects(){ return effects; }
 
-	enum State{
-		JUMP, GROUND, DOUBLEJUMP, DAMAGE
-	}
-
 	public void reactToHero(Hero hero) { }
 
 	public void reactToAll(Entity en) {
 		if (isHeavy()) tremor(en);
+	}
+	
+	int facing(){
+		if (facing == Facing.RIGHT) return 1;
+		else return -1;
 	}
 
 	Animation makeAnimation(String address, int cols, int rows, float speed, PlayMode playMode){
@@ -384,5 +395,9 @@ public abstract class Entity {
 
 	enum Facing{
 		LEFT, RIGHT
+	}
+	
+	enum State{
+		JUMP, DOUBLEJUMP, DAMAGE, STAND, CROUCH
 	}
 }

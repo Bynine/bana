@@ -44,7 +44,7 @@ public class Whump extends Entity{
 			velocity.y -= acceleration*room.getGravity();
 			if (velocity.y < terminalVelocity*room.getGravity()) velocity.y = terminalVelocity*room.getGravity();
 		}
-		if (state == State.GROUND) {
+		if (flag_GROUNDED) {
 			flag_FALLING = false;
 			if (groundedTimer.stopped()) groundedTimer.set();
 			if (groundedTimer.timed()){
@@ -71,7 +71,7 @@ public class Whump extends Entity{
 	@Override
 	public void updateImage(){
 		super.updateImage();
-		if (velocity.y > 0 || state == State.GROUND) changeImage(rising);
+		if (velocity.y > 0 || flag_GROUNDED) changeImage(rising);
 		else if (flag_FALLING ) changeImage(falling);
 		else changeImage(normal);
 	}
