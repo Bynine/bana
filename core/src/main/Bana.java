@@ -27,7 +27,7 @@ public final class Bana extends ApplicationAdapter implements InputProcessor{
 	private static float volume = 0.0f;
 	private void startGame(){
 		state = State.GAME;
-		activeLevel = new Level_Oasis();
+		activeLevel = new Level_Test();
 		Room startingRoom = activeLevel.getRoom(0);
 		hero = new Hero(startingRoom.getStartPosition().x, startingRoom.getStartPosition().y, this);
 		changeRoom(startingRoom, startingRoom.getStartPosition(), true);

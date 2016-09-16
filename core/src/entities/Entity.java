@@ -91,8 +91,14 @@ public abstract class Entity {
 	}
 	void updateSpeed(){
 		if (flag_GROUNDED){
-			if (flag_GOLEFT)  velocity.x-=acceleration;
-			if (flag_GORIGHT) velocity.x+=acceleration;
+			if (state == State.STAND){
+				if (flag_GOLEFT)  velocity.x-=acceleration;
+				if (flag_GORIGHT) velocity.x+=acceleration;
+			}
+			else{
+				if (flag_GOLEFT)  velocity.x-=(acceleration/4);
+				if (flag_GORIGHT) velocity.x+=(acceleration/4);
+			}
 		}
 		else{
 			if (flag_GOLEFT)  velocity.x-=airacceleration;
@@ -204,6 +210,11 @@ public abstract class Entity {
 	public void stop(){
 		velocity.x = 0;
 		velocity.y = 0;
+	}
+	public void flip(){
+		if (facing == Facing.LEFT) facing = Facing.RIGHT;
+		else facing = Facing.LEFT;
+		image.flip(true, false);
 	}
 	public void die(){
 		flag_GOLEFT = flag_GORIGHT = false;
@@ -328,7 +339,7 @@ public abstract class Entity {
 	public void reactToAll(Entity en) {
 		if (isHeavy()) tremor(en);
 	}
-	
+
 	int facing(){
 		if (facing == Facing.RIGHT) return 1;
 		else return -1;
@@ -396,8 +407,8 @@ public abstract class Entity {
 	enum Facing{
 		LEFT, RIGHT
 	}
-	
+
 	enum State{
-		JUMP, DOUBLEJUMP, DAMAGE, STAND, CROUCH
+		JUMP, DOUBLEJUMP, DAMAGE, STAND, CROUCH, WALLJUMP
 	}
 }

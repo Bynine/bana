@@ -17,13 +17,12 @@ import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
-import entities.Entity.State;
-
 public class Hero extends Entity{
 
-	private boolean flag_INTERACT, flag_LANDEDHIT;
+	private boolean flag_DOUBLEJUMPED, flag_INTERACT, flag_LANDEDHIT;
 	private Timer attackTimer = new Timer(20);
 	private Timer slideTimer = new Timer(20);
+	private Timer wallJumpTimer = new Timer(10);
 	Sprite jumpImage = new Sprite(new Texture(Gdx.files.internal("sprites/herojump.PNG")));
 	Sprite attackImage = new Sprite(new Texture(Gdx.files.internal("sprites/herokick.PNG")));
 	Sprite hurtImage = new Sprite(new Texture(Gdx.files.internal("sprites/herohurt.PNG")));
@@ -50,7 +49,7 @@ public class Hero extends Entity{
 		health = maxHealth;
 		setImage(standImage);
 		hurt = Gdx.audio.newSound(Gdx.files.internal("sfx/herohurt.mp3"));
-		timerList.addAll(Arrays.asList(invincibleTimer, attackTimer, stunTimer, slideTimer));
+		timerList.addAll(Arrays.asList(invincibleTimer, attackTimer, stunTimer, slideTimer, wallJumpTimer));
 		jumpStrength = 10f;
 		kneeHitbox = new Hitbox(image.getWidth()-8, 8, 10, image.getHeight());
 		hitboxList.add(kneeHitbox);
@@ -59,10 +58,10 @@ public class Hero extends Entity{
 	public void updateImage(){
 		super.updateImage();
 		if (!stunTimer.stopped()) changeImage(hurtImage);
-		if (!slideTimer.stopped()) changeImage(slideImage);
+		else if (!slideTimer.stopped()) changeImage(slideImage);
 		else if (!attackTimer.stopped()) changeImage(attackImage);
 		else if (state == State.JUMP || state == State.DOUBLEJUMP || isFalling()) changeImage(jumpImage);
-		else if (state == State.CROUCH) changeImage(slideImage);
+		else if (state == State.CROUCH) setImage(slideImage);
 		else if (flag_GOLEFT || flag_GORIGHT) changeImage(walk.getKeyFrame(deltaTime));
 		else changeImage(standImage);
 	}
@@ -80,13 +79,13 @@ public class Hero extends Entity{
 		}
 	}
 	private boolean canExecuteInput(){
-		return (slideTimer.stopped());
+		return (slideTimer.stopped() && wallJumpTimer.stopped());
 	}
 	
 	@Override
 	void updateSpeed(){
 		if (!slideTimer.stopped()) {
-			final double slideSpeed = 1;
+			double slideSpeed = 1;
 			velocity.x += facing()*slideSpeed;
 			return;
 		}
@@ -236,8 +235,17 @@ public class Hero extends Entity{
 		state = State.DOUBLEJUMP;
 		velocity.y = jumpStrength*.8f;
 	}
+	private void wallJump(){
+		wallJumpTimer.set();
+		jump.play(Bana.getVolume());
+		state = State.WALLJUMP;
+		flip();
+		velocity.x = facing()*jumpStrength;
+		velocity.y = jumpStrength*.8f;
+	}
 	private void pressAttack(){
 		if (attackTimer.stopped()) {
+			attackTimer.set();
 			if (flag_GROUNDED) dashAttack();
 			else airAttack();
 		}
@@ -245,14 +253,12 @@ public class Hero extends Entity{
 	}
 	private void dashAttack(){
 		slideTimer.set();
-		attackTimer.set();
-		int slideSpeed = 10;
+		int slideSpeed = 12;
 		velocity.x += facing()*slideSpeed;
 		kneeHitbox.activate();
 	}
 	private void airAttack(){
-		attackTimer.set();
-		int kneeSpeed = 5;
+		int kneeSpeed = 1;
 		velocity.x += facing()*kneeSpeed;
 		kneeHitbox.activate();
 	}
@@ -286,8 +292,7 @@ public class Hero extends Entity{
 	public void reset(){
 		stop();
 		if (facing == Facing.LEFT){
-			facing = Facing.RIGHT;
-			image.flip(true, false);
+			flip();
 			kneeHitbox.setDisplacementX(image.getWidth());
 		}
 		health = maxHealth;
